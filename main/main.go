@@ -9,6 +9,7 @@ import (
 	"github.com/googollee/go-socket.io/engineio/transport/websocket"
 	"log"
 	"net/http"
+	"runtime"
 	"time"
 )
 
@@ -18,6 +19,18 @@ var allowOriginFunc = func(r *http.Request) bool {
 }
 
 func main() {
+
+	defer func() {
+		if err := recover(); err != nil {
+			for i := 3; ; i++ {
+				pc, file, line, ok := runtime.Caller(i)
+				if !ok {
+					break
+				}
+				fmt.Println(pc, file, line)
+			}
+		}
+	}()
 
 	//定义服务，处理跨域问题
 	server := socketIo.NewServer(&engineio.Options{
@@ -50,9 +63,7 @@ func main() {
 	})
 
 	//联系丢失
-	server.OnDisconnect("/", func(s socketIo.Conn, reason string) {
-		fmt.Println("closed", reason)
-	})
+	server.OnDisconnect("/", handDisconnected)
 
 	go server.Serve()
 	defer server.Close()
@@ -61,5 +72,3 @@ func main() {
 	log.Println("Serving at localhost:8000...")
 	log.Fatal(http.ListenAndServe(":8000", nil))
 }
-
-

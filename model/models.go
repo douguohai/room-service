@@ -7,9 +7,11 @@ import (
 
 //用户信息
 type User struct {
-	Uid      string `json:"uid"`      //用户唯一标识
-	Nickname string `json:"nickname"` //用户昵称
-	Sdp      string `json:"sdp"`      //webrtc 核心
+	Uid         string   `json:"uid"`         //用户唯一标识
+	Nickname    string   `json:"nickname"`    //用户昵称
+	Sdp         string   `json:"sdp"`         //webrtc 核心
+	CreatedRoom sets.Set `json:"createdRoom"` //自己创建的房间集合
+	JoinedRoom  sets.Set `json:"joinedRoom"`  //加入的房间集合
 }
 
 func (u *User) ToString() string {
