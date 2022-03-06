@@ -18,22 +18,11 @@ var allowOriginFunc = func(r *http.Request) bool {
 	return true
 }
 
-func main() {
+var server *socketIo.Server = nil
 
-	defer func() {
-		if err := recover(); err != nil {
-			for i := 3; ; i++ {
-				pc, file, line, ok := runtime.Caller(i)
-				if !ok {
-					break
-				}
-				fmt.Println(pc, file, line)
-			}
-		}
-	}()
-
+func init() {
 	//定义服务，处理跨域问题
-	server := socketIo.NewServer(&engineio.Options{
+	server = socketIo.NewServer(&engineio.Options{
 		PingTimeout:  time.Second * 2,
 		PingInterval: time.Millisecond * 20,
 		Transports: []transport.Transport{
@@ -45,6 +34,22 @@ func main() {
 			},
 		},
 	})
+}
+
+func main() {
+
+	defer func() {
+		if err := recover(); err != nil {
+			for i := 3; ; i++ {
+				pc, file, line, ok := runtime.Caller(i)
+				if !ok {
+					break
+				}
+				fmt.Println(pc, file, line)
+			}
+			return
+		}
+	}()
 
 	server.OnConnect("/", handleConnected)
 
@@ -71,4 +76,9 @@ func main() {
 	http.Handle("/", http.FileServer(http.Dir("/Users/tianwen/Desktop/")))
 	log.Println("Serving at localhost:8000...")
 	log.Fatal(http.ListenAndServe(":8000", nil))
+}
+
+// GetDefaultServer 获取socketIo 的server
+func GetDefaultServer() *socketIo.Server {
+	return server
 }
