@@ -5,6 +5,7 @@ const (
 	UserTokenNotFindCode
 	RoomInfoNotFindCode
 	TypeCaseErrorCode
+	UserSocketNotFindCode
 )
 
 const (

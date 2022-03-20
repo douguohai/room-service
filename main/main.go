@@ -62,6 +62,15 @@ func main() {
 	//离开房间
 	server.OnEvent("/", "leave", handleRoomLeave)
 
+	//拨打电话
+	server.OnEvent("/", "handCall", handCall)
+
+	//拨打电话
+	server.OnEvent("/", "handAnswer", handAnswer)
+
+	//交换信令
+	server.OnEvent("/", "iceCandidate", handIceCandidate)
+
 	//联系出错
 	server.OnError("/", func(s socketIo.Conn, e error) {
 		fmt.Println("meet error:", e)

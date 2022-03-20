@@ -43,3 +43,26 @@ type Result struct {
 func (result *Result) ToString() string {
 	return fmt.Sprintf("[%v,%v,%v]", result.Code, result.Msg, result.Data)
 }
+
+// CallSomeone 拨打电话id
+type CallSomeone struct {
+	FromUid   string `json:"fromUid"`   //来自用户id
+	ToUid     string `json:"toUid"`     //目标用户id
+	Offer     string `json:"offer"`     //发起的offer
+	OfferType string `json:"offerType"` //发起的offer的类型
+}
+
+// AnswerSomeone 回复拨打电话信息
+type AnswerSomeone struct {
+	FromUid    string `json:"fromUid"`    //来自用户id
+	ToUid      string `json:"toUid"`      //目标用户id
+	Answer     string `json:"answer"`     //回复offer的 answer
+	AnswerType string `json:"answerType"` //发起的offer的类型
+}
+
+// IceCandidate 交换
+type IceCandidate struct {
+	FromUid      string      `json:"fromUid"`      //来自用户id
+	ToUid        string      `json:"toUid"`        //目标用户id
+	IceCandidate interface{} `json:"iceCandidate"` //发起的offer的类型
+}

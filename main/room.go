@@ -52,7 +52,7 @@ func handleConnected(s socketIo.Conn) error {
 		userToken, ok := paramMap["token"]
 		if ok {
 			userToken2SocketIdMap, socketId2UserTokenMap := getUserTokenSocketMapping()
-			userToken2SocketIdMap.Put(userToken, s.ID())
+			userToken2SocketIdMap.Put(userToken, s)
 			log.Printf("userToken->socket 新增一条记录 用户标识为：%v socket 标识为: %v\n", userToken, s.ID())
 			socketId2UserTokenMap.Put(s.ID(), userToken)
 			log.Printf("socket->userToken 新增一条记录 用户标识为：%v socket 标识为: %v\n", userToken, s.ID())
@@ -162,9 +162,64 @@ func handleRoomLeave(s socketIo.Conn, msg string) {
 
 //处理呼叫
 func handCall(s socketIo.Conn, msg string) {
+	callSomeone := model.CallSomeone{}
+	_ = json.Unmarshal([]byte(msg), &callSomeone)
 	//根据msg中对方的人员信息判断对方是否在线
-	//在线的话，给对方发送通通，将当前人员的基本信息发送过去
+	userToken2SocketIdMap, _ := getUserTokenSocketMapping()
+	toSocket, ok := userToken2SocketIdMap.Get(callSomeone.ToUid)
 	//不在线的话，直接给申请方发送联系人不在线提示
+	if !ok {
+		handError(s, model.Result{
+			Code: UserSocketNotFindCode,
+			Msg:  "未发现拨号用户信息或者对方此时未在线",
+		})
+		return
+	}
+	callSomeone.FromUid = s.Context().(string)
+	//在线的话，给对方发送通通，将offer信息同步过去
+	toSocket2, ok := toSocket.(socketIo.Conn)
+	toSocket2.Emit("callYou", callSomeone)
+}
+
+//处理呼叫
+func handAnswer(s socketIo.Conn, msg string) {
+	answerSomeone := model.AnswerSomeone{}
+	_ = json.Unmarshal([]byte(msg), &answerSomeone)
+	fmt.Printf(answerSomeone.FromUid)
+	//根据msg中对方的人员信息判断对方是否在线
+	userToken2SocketIdMap, _ := getUserTokenSocketMapping()
+	toSocket, ok := userToken2SocketIdMap.Get(answerSomeone.ToUid)
+	//不在线的话，直接给申请方发送联系人不在线提示
+	if !ok {
+		handError(s, model.Result{
+			Code: UserSocketNotFindCode,
+			Msg:  "未发现拨号用户信息或者对方此时未在线",
+		})
+		return
+	}
+	//在线的话，给对方发送通通，将offer信息同步过去
+	toSocket2, ok := toSocket.(socketIo.Conn)
+	toSocket2.Emit("answerYou", answerSomeone)
+}
+
+//交换
+func handIceCandidate(s socketIo.Conn, msg string) {
+	iceCandidate := model.IceCandidate{}
+	_ = json.Unmarshal([]byte(msg), &iceCandidate)
+	//根据msg中对方的人员信息判断对方是否在线
+	userToken2SocketIdMap, _ := getUserTokenSocketMapping()
+	toSocket, ok := userToken2SocketIdMap.Get(iceCandidate.ToUid)
+	//不在线的话，直接给申请方发送联系人不在线提示
+	if !ok {
+		handError(s, model.Result{
+			Code: UserSocketNotFindCode,
+			Msg:  "未发现拨号用户信息或者对方此时未在线",
+		})
+		return
+	}
+	//在线的话，给对方发送通通，将offer信息同步过去
+	toSocket2, ok := toSocket.(socketIo.Conn)
+	toSocket2.Emit("iceCandidate", iceCandidate)
 }
 
 //处理拒绝
