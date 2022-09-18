@@ -1,14 +1,15 @@
-package main
+package service
 
 import (
 	"encoding/json"
 	"fmt"
 	hashMap "github.com/douguohai/gods/maps/hashmap"
 	hashSet "github.com/douguohai/gods/sets/hashset"
+	"github.com/douguohai/room-service/base"
+	"github.com/douguohai/room-service/model"
 	"github.com/gofrs/uuid"
 	socketIo "github.com/googollee/go-socket.io"
 	"log"
-	"room-service/model"
 	"strings"
 	"sync"
 )
@@ -35,7 +36,7 @@ var userToken2SocketIdMap *hashMap.Map
 var socketId2UserTokenMap *hashMap.Map
 
 //服务端建立联系成功,添加用户标识和socket关系的相互映射
-func handleConnected(s socketIo.Conn) error {
+func HandleConnected(s socketIo.Conn) error {
 	fmt.Println("connected:", s.ID(), s.URL().RawQuery)
 	var queryStr = s.URL().RawQuery
 	var queryArr = strings.Split(queryStr, "&")
@@ -64,13 +65,13 @@ func handleConnected(s socketIo.Conn) error {
 
 //创建房间，设置房间主人信息，生成房间唯一标识，创建对应关系映射
 //http://127.0.0.1:8000/socket.io/?token=1234&EIO=3&transport=polling&t=NzOmN7m
-func handleCreateRoom(s socketIo.Conn, msg string) {
+func HandleCreateRoom(s socketIo.Conn, msg string) {
 	_, socketId2UserTokenMap := getUserTokenSocketMapping()
 	userToken, ok := socketId2UserTokenMap.Get(s.ID())
 	if !ok {
 		handError(s, model.Result{
-			Code: UserTokenNotFindCode,
-			Msg:  UserTokenNotFindMsg,
+			Code: base.UserTokenNotFindCode,
+			Msg:  base.UserTokenNotFindMsg,
 			Data: userToken,
 		})
 		return
@@ -91,8 +92,8 @@ func handleCreateRoom(s socketIo.Conn, msg string) {
 	//代表是已经存在的用户
 	if !strings.EqualFold(currentUser.Uid, userToken.(string)) {
 		handError(s, model.Result{
-			Code: UserTokenNotSameCode,
-			Msg:  UserTokenNotSameMsg,
+			Code: base.UserTokenNotSameCode,
+			Msg:  base.UserTokenNotSameMsg,
 			Data: currentUser,
 		})
 		return
@@ -125,7 +126,7 @@ func handleCreateRoom(s socketIo.Conn, msg string) {
 //        sdp: "",
 //      },
 //    };
-func handleRoomJoin(s socketIo.Conn, msg string) {
+func HandleRoomJoin(s socketIo.Conn, msg string) {
 	joinRoom := model.JoinRoom{}
 	_ = json.Unmarshal([]byte(msg), &joinRoom)
 	//根据房间id查找对应房间映射
@@ -133,7 +134,7 @@ func handleRoomJoin(s socketIo.Conn, msg string) {
 	room, ok := roomId2RoomMap.Get(joinRoom.Rid)
 	if !ok {
 		handError(s, model.Result{
-			Code: RoomInfoNotFindCode,
+			Code: base.RoomInfoNotFindCode,
 			Msg:  fmt.Sprintf("根据房间id %v，未查询到房间信息", joinRoom.Rid),
 		})
 		return
@@ -141,7 +142,7 @@ func handleRoomJoin(s socketIo.Conn, msg string) {
 	room2, ok := room.(model.Room)
 	if !ok {
 		handError(s, model.Result{
-			Code: TypeCaseErrorCode,
+			Code: base.TypeCaseErrorCode,
 			Msg:  "房间类型转换错误",
 		})
 		return
@@ -149,19 +150,19 @@ func handleRoomJoin(s socketIo.Conn, msg string) {
 	//自己加入房间
 	room2.UserSet.Add(joinRoom.User)
 
-	GetDefaultServer().JoinRoom(s.Namespace(), room2.Rid, s)
-	GetDefaultServer().BroadcastToRoom(s.Namespace(), room2.Rid, "joined", room2)
+	base.GetDefaultServer().JoinRoom(s.Namespace(), room2.Rid, s)
+	base.GetDefaultServer().BroadcastToRoom(s.Namespace(), room2.Rid, "joined", room2)
 	fmt.Printf("用户 %v 成功加入房间 %v\n", joinRoom.User.Uid, joinRoom.Rid)
 }
 
 //离开房间
-func handleRoomLeave(s socketIo.Conn, msg string) {
+func HandleRoomLeave(s socketIo.Conn, msg string) {
 	s.SetContext(msg)
 	fmt.Println("success leave a room hello")
 }
 
 //处理呼叫
-func handCall(s socketIo.Conn, msg string) {
+func HandCall(s socketIo.Conn, msg string) {
 	callSomeone := model.CallSomeone{}
 	_ = json.Unmarshal([]byte(msg), &callSomeone)
 	//根据msg中对方的人员信息判断对方是否在线
@@ -170,7 +171,7 @@ func handCall(s socketIo.Conn, msg string) {
 	//不在线的话，直接给申请方发送联系人不在线提示
 	if !ok {
 		handError(s, model.Result{
-			Code: UserSocketNotFindCode,
+			Code: base.UserSocketNotFindCode,
 			Msg:  "未发现拨号用户信息或者对方此时未在线",
 		})
 		return
@@ -182,7 +183,7 @@ func handCall(s socketIo.Conn, msg string) {
 }
 
 //处理呼叫
-func handAnswer(s socketIo.Conn, msg string) {
+func HandAnswer(s socketIo.Conn, msg string) {
 	answerSomeone := model.AnswerSomeone{}
 	_ = json.Unmarshal([]byte(msg), &answerSomeone)
 	fmt.Printf(answerSomeone.FromUid)
@@ -192,7 +193,7 @@ func handAnswer(s socketIo.Conn, msg string) {
 	//不在线的话，直接给申请方发送联系人不在线提示
 	if !ok {
 		handError(s, model.Result{
-			Code: UserSocketNotFindCode,
+			Code: base.UserSocketNotFindCode,
 			Msg:  "未发现拨号用户信息或者对方此时未在线",
 		})
 		return
@@ -203,7 +204,7 @@ func handAnswer(s socketIo.Conn, msg string) {
 }
 
 //交换
-func handIceCandidate(s socketIo.Conn, msg string) {
+func HandIceCandidate(s socketIo.Conn, msg string) {
 	iceCandidate := model.IceCandidate{}
 	_ = json.Unmarshal([]byte(msg), &iceCandidate)
 	//根据msg中对方的人员信息判断对方是否在线
@@ -212,7 +213,7 @@ func handIceCandidate(s socketIo.Conn, msg string) {
 	//不在线的话，直接给申请方发送联系人不在线提示
 	if !ok {
 		handError(s, model.Result{
-			Code: UserSocketNotFindCode,
+			Code: base.UserSocketNotFindCode,
 			Msg:  "未发现拨号用户信息或者对方此时未在线",
 		})
 		return
@@ -223,13 +224,13 @@ func handIceCandidate(s socketIo.Conn, msg string) {
 }
 
 //处理拒绝
-func handReject(msg string) {
+func HandReject(msg string) {
 	//根据msg中对方的人员信息判断对方是否在线
 	//在线的话，直接给申请方发送联系人不在线提示
 }
 
 //处理联系丢失情况或者链接中断的情况
-func handDisconnected(s socketIo.Conn, reason string) {
+func HandDisconnected(s socketIo.Conn, reason string) {
 	//清除对应socket和用户之间的关联信息
 	userToken2SocketIdMap, socketId2UserTokenMap = getUserTokenSocketMapping()
 	_, ok := socketId2UserTokenMap.Get(s.ID())

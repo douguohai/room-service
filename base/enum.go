@@ -1,4 +1,4 @@
-package main
+package base
 
 const (
 	UserTokenNotSameCode int = 9000 + iota

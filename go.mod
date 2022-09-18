@@ -1,4 +1,4 @@
-module room-service
+module github.com/douguohai/room-service
 
 go 1.16
 

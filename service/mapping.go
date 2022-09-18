@@ -1,6 +1,8 @@
-package main
+package service
 
-import hashMap "github.com/douguohai/gods/maps/hashmap"
+import (
+	hashMap "github.com/douguohai/gods/maps/hashmap"
+)
 
 //获取用户唯一id和socket的映射集合
 func getUserTokenSocketMapping() (*hashMap.Map, *hashMap.Map) {
