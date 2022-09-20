@@ -3,39 +3,40 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"strings"
+	"sync"
+
 	hashMap "github.com/douguohai/gods/maps/hashmap"
 	hashSet "github.com/douguohai/gods/sets/hashset"
 	"github.com/douguohai/room-service/base"
 	"github.com/douguohai/room-service/model"
 	"github.com/gofrs/uuid"
 	socketIo "github.com/googollee/go-socket.io"
-	"log"
-	"strings"
-	"sync"
 )
 
-//锁 用于 roomId2RoomMap 这个对象初始化
+// 锁 用于 roomId2RoomMap 这个对象初始化
 var roomId2RoomMapOnce sync.Once
 
-//roomId和room 关系映射
+// roomId和room 关系映射
 var roomId2RoomMap *hashMap.Map
 
-//锁 用于 userTokenUsersMap 这个对象初始化
+// 锁 用于 userTokenUsersMap 这个对象初始化
 var userTokenUsersMapOnce sync.Once
 
-//用户唯一标识和用户信息映射
+// 用户唯一标识和用户信息映射
 var userTokenUsersMap *hashMap.Map
 
-//用于 userId2SocketIdMap、socketId2UserTokenMap 这两个对象初始化
+// 用于 userId2SocketIdMap、socketId2UserTokenMap 这两个对象初始化
 var initOnce sync.Once
 
-//用户->socketId 关系映射
+// 用户->socketId 关系映射
 var userToken2SocketIdMap *hashMap.Map
 
-//socketId->用户 关系映射
+// socketId->用户 关系映射
 var socketId2UserTokenMap *hashMap.Map
 
-//服务端建立联系成功,添加用户标识和socket关系的相互映射
+// 服务端建立联系成功,添加用户标识和socket关系的相互映射
 func HandleConnected(s socketIo.Conn) error {
 	fmt.Println("connected:", s.ID(), s.URL().RawQuery)
 	var queryStr = s.URL().RawQuery
@@ -63,8 +64,8 @@ func HandleConnected(s socketIo.Conn) error {
 	return nil
 }
 
-//创建房间，设置房间主人信息，生成房间唯一标识，创建对应关系映射
-//http://127.0.0.1:8000/socket.io/?token=1234&EIO=3&transport=polling&t=NzOmN7m
+// 创建房间，设置房间主人信息，生成房间唯一标识，创建对应关系映射
+// http://127.0.0.1:8000/socket.io/?token=1234&EIO=3&transport=polling&t=NzOmN7m
 func HandleCreateRoom(s socketIo.Conn, msg string) {
 	_, socketId2UserTokenMap := getUserTokenSocketMapping()
 	userToken, ok := socketId2UserTokenMap.Get(s.ID())
@@ -118,14 +119,15 @@ func HandleCreateRoom(s socketIo.Conn, msg string) {
 
 }
 
-//加入房间 目前只支持 1对1
-//JoinRoom = {
-//      rid: "",
-//      user: {
-//        uid: "",
-//        sdp: "",
-//      },
-//    };
+// 加入房间 目前只支持 1对1
+//
+//	JoinRoom = {
+//	     rid: "",
+//	     user: {
+//	       uid: "",
+//	       sdp: "",
+//	     },
+//	   };
 func HandleRoomJoin(s socketIo.Conn, msg string) {
 	joinRoom := model.JoinRoom{}
 	_ = json.Unmarshal([]byte(msg), &joinRoom)
@@ -155,13 +157,13 @@ func HandleRoomJoin(s socketIo.Conn, msg string) {
 	fmt.Printf("用户 %v 成功加入房间 %v\n", joinRoom.User.Uid, joinRoom.Rid)
 }
 
-//离开房间
+// 离开房间
 func HandleRoomLeave(s socketIo.Conn, msg string) {
 	s.SetContext(msg)
 	fmt.Println("success leave a room hello")
 }
 
-//处理呼叫
+// 处理呼叫
 func HandCall(s socketIo.Conn, msg string) {
 	callSomeone := model.CallSomeone{}
 	_ = json.Unmarshal([]byte(msg), &callSomeone)
@@ -182,7 +184,7 @@ func HandCall(s socketIo.Conn, msg string) {
 	toSocket2.Emit("callYou", callSomeone)
 }
 
-//处理呼叫
+// 处理呼叫
 func HandAnswer(s socketIo.Conn, msg string) {
 	answerSomeone := model.AnswerSomeone{}
 	_ = json.Unmarshal([]byte(msg), &answerSomeone)
@@ -203,7 +205,7 @@ func HandAnswer(s socketIo.Conn, msg string) {
 	toSocket2.Emit("answerYou", answerSomeone)
 }
 
-//交换
+// 交换
 func HandIceCandidate(s socketIo.Conn, msg string) {
 	iceCandidate := model.IceCandidate{}
 	_ = json.Unmarshal([]byte(msg), &iceCandidate)
@@ -223,13 +225,13 @@ func HandIceCandidate(s socketIo.Conn, msg string) {
 	toSocket2.Emit("iceCandidate", iceCandidate)
 }
 
-//处理拒绝
+// 处理拒绝
 func HandReject(msg string) {
 	//根据msg中对方的人员信息判断对方是否在线
 	//在线的话，直接给申请方发送联系人不在线提示
 }
 
-//处理联系丢失情况或者链接中断的情况
+// 处理联系丢失情况或者链接中断的情况
 func HandDisconnected(s socketIo.Conn, reason string) {
 	//清除对应socket和用户之间的关联信息
 	userToken2SocketIdMap, socketId2UserTokenMap = getUserTokenSocketMapping()
@@ -237,20 +239,23 @@ func HandDisconnected(s socketIo.Conn, reason string) {
 	if ok {
 		socketId2UserTokenMap.Remove(s.ID())
 	}
-	userToken := s.Context().(string)
-	_, ok2 := userToken2SocketIdMap.Get(userToken)
-	if ok2 {
-		userToken2SocketIdMap.Remove(userToken)
+	if nil != s.Context() {
+		userToken := s.Context().(string)
+		_, ok2 := userToken2SocketIdMap.Get(userToken)
+		if ok2 {
+			userToken2SocketIdMap.Remove(userToken)
+		}
+		fmt.Printf("已经清除对应人员缓存的信息 socket: %v 用户名: %v\n", s.ID(), userToken)
+		//清除对应的空闲房间信息
+		user, ok2 := getUserTokenUsersMap().Get(userToken)
+		if ok2 {
+			go cleanEmptyRoom(user.(model.User))
+		}
 	}
-	fmt.Printf("已经清除对应人员缓存的信息 socket: %v 用户名: %v\n", s.ID(), userToken)
-	//清除对应的空闲房间信息
-	user, ok2 := getUserTokenUsersMap().Get(userToken)
-	if ok2 {
-		go cleanEmptyRoom(user.(model.User))
-	}
+
 }
 
-//清除对用的空闲房间
+// 清除对用的空闲房间
 func cleanEmptyRoom(user model.User) {
 	//把参与房间中的自己信息去除掉
 	//将空房间全部删除掉
@@ -278,7 +283,7 @@ func cleanEmptyRoom(user model.User) {
 	}
 }
 
-//异常处理逻辑
+// 异常处理逻辑
 func handError(s socketIo.Conn, result model.Result) {
 	log.Printf(result.ToString())
 	s.Emit("errored", result)
