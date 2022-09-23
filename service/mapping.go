@@ -2,7 +2,17 @@ package service
 
 import (
 	hashMap "github.com/douguohai/gods/maps/hashmap"
+	"sync"
 )
+
+//用于 userId2SocketIdMap、socketId2UserTokenMap 这两个对象初始化
+var initOnce sync.Once
+
+//锁 用于 roomId2RoomMap 这个对象初始化
+var roomId2RoomMapOnce sync.Once
+
+//锁 用于 userTokenUsersMap 这个对象初始化
+var userTokenUsersMapOnce sync.Once
 
 //获取用户唯一id和socket的映射集合
 func getUserTokenSocketMapping() (*hashMap.Map, *hashMap.Map) {
