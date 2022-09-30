@@ -50,7 +50,6 @@ func StartSocket() {
 				}
 				fmt.Println(pc, file, line)
 			}
-			return
 		}
 	}()
 
@@ -86,6 +85,7 @@ func StartSocket() {
 	defer server.Close()
 	http.Handle("/socket.io/", server)
 	//http.Handle("/", http.FileServer(http.Dir("/Users/tianwen/Desktop/")))
+	http.Handle("/login", service.CrosMiddleware(service.Login))
 	log.Println("Serving at localhost:8000...")
 	log.Fatal(http.ListenAndServe(":8000", nil))
 }

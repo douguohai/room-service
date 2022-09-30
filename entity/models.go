@@ -1,4 +1,4 @@
-package model
+package entity
 
 import (
 	"fmt"
@@ -32,18 +32,6 @@ type JoinRoom struct {
 	User User   `json:"user"` //加入人员的信息
 }
 
-// Result 统一返回结果
-type Result struct {
-	Code int         `json:"code"` //状态码
-	Msg  string      `json:"msg"`  //状态信息
-	Data interface{} `json:"data"` //具体业务数据
-}
-
-// ToString Result
-func (result *Result) ToString() string {
-	return fmt.Sprintf("[%v,%v,%v]", result.Code, result.Msg, result.Data)
-}
-
 // CallSomeone 拨打电话id
 type CallSomeone struct {
 	FromUid   string `json:"fromUid"`   //来自用户id
@@ -65,4 +53,10 @@ type IceCandidate struct {
 	FromUid      string      `json:"fromUid"`      //来自用户id
 	ToUid        string      `json:"toUid"`        //目标用户id
 	IceCandidate interface{} `json:"iceCandidate"` //发起的offer的类型
+}
+
+// Login 用户登录对象
+type Login struct {
+	Username string `json:"username"` //用户名
+	Password string `json:"password"` //密码
 }
